@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Subscription {
+  free
+  free_trial @map("free-trial")
+  pro
+  cancelled
+}
+
+enum Role {
+  user
+  admin
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password        String
+  firstName       String?
+  lastName        String?
+  emailConfirmed  Boolean   @default(false)
+  subscription    Subscription @default(free)
+  nextPaymentDate DateTime?
+  trialEndsDate   DateTime?
+  role            Role      @default(user)
+  notification    Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+
+  weeklyStreaks   WeeklyStreak[]
+  verificationTokens VerificationToken[]
+
+  @@map("users")
+}
+
+model WeeklyStreak {
+  id     String   @id @default(uuid())
+  userId String
+  date   DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("weekly_streaks")
+}
+
+model VerificationToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("verification_tokens")
+}
