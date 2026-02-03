@@ -19,48 +19,52 @@ This is the backend for **Kumo** - a mental wellness React Native app (Expo 54).
 ## Database Schema
 
 ### users
-| Column           | Type        | Notes                                           |
-|------------------|-------------|-------------------------------------------------|
-| id               | UUID (PK)   | Auto-generated                                  |
-| email            | VARCHAR     | Unique, required                                |
-| password         | VARCHAR     | Hashed (bcrypt)                                 |
-| firstName        | VARCHAR     | Nullable                                        |
-| lastName         | VARCHAR     | Nullable                                        |
-| emailConfirmed   | BOOLEAN     | Default: false                                  |
-| subscription     | ENUM        | `free`, `free-trial`, `pro`, `cancelled`        |
-| nextPaymentDate  | TIMESTAMP   | Nullable                                        |
-| trialEndsDate    | TIMESTAMP   | Nullable                                        |
-| role             | ENUM        | `user`, `admin`. Default: `user`                |
-| notification     | BOOLEAN     | Default: true (push notifications enabled)      |
-| createdAt        | TIMESTAMP   | Auto-generated                                  |
+
+| Column          | Type      | Notes                                      |
+| --------------- | --------- | ------------------------------------------ |
+| id              | UUID (PK) | Auto-generated                             |
+| email           | VARCHAR   | Unique, required                           |
+| password        | VARCHAR   | Hashed (bcrypt)                            |
+| firstName       | VARCHAR   | Nullable                                   |
+| lastName        | VARCHAR   | Nullable                                   |
+| emailConfirmed  | BOOLEAN   | Default: false                             |
+| subscription    | ENUM      | `free`, `free-trial`, `pro`, `cancelled`   |
+| nextPaymentDate | TIMESTAMP | Nullable                                   |
+| trialEndsDate   | TIMESTAMP | Nullable                                   |
+| role            | ENUM      | `user`, `admin`. Default: `user`           |
+| notification    | BOOLEAN   | Default: true (push notifications enabled) |
+| createdAt       | TIMESTAMP | Auto-generated                             |
 
 ### weekly_streaks
-| Column    | Type        | Notes                    |
-|-----------|-------------|--------------------------|
-| id        | UUID (PK)   |                          |
-| userId    | UUID (FK)   | References users.id      |
-| date      | TIMESTAMP   |                          |
+
+| Column | Type      | Notes               |
+| ------ | --------- | ------------------- |
+| id     | UUID (PK) |                     |
+| userId | UUID (FK) | References users.id |
+| date   | TIMESTAMP |                     |
 
 ### conversations
-| Column      | Type        | Notes                              |
-|-------------|-------------|------------------------------------|
-| id          | UUID (PK)   |                                    |
-| userId      | UUID (FK)   | References users.id                |
-| title       | VARCHAR     | Nullable, auto-generate from first message |
-| lastMessage | TEXT        | Nullable, update on each new message |
-| createdAt   | TIMESTAMP   |                                    |
-| updatedAt   | TIMESTAMP   |                                    |
+
+| Column      | Type      | Notes                                      |
+| ----------- | --------- | ------------------------------------------ |
+| id          | UUID (PK) |                                            |
+| userId      | UUID (FK) | References users.id                        |
+| title       | VARCHAR   | Nullable, auto-generate from first message |
+| lastMessage | TEXT      | Nullable, update on each new message       |
+| createdAt   | TIMESTAMP |                                            |
+| updatedAt   | TIMESTAMP |                                            |
 
 ### messages
-| Column         | Type        | Notes                              |
-|----------------|-------------|------------------------------------|
-| id             | UUID (PK)   |                                    |
-| conversationId | UUID (FK)   | References conversations.id        |
-| role           | ENUM        | `user`, `assistant`                |
-| content        | TEXT        | Empty string for audio-only msgs   |
-| audioUrl       | VARCHAR     | Nullable, URL to stored audio      |
-| audioDuration  | INTEGER     | Nullable, seconds                  |
-| createdAt      | TIMESTAMP   |                                    |
+
+| Column         | Type      | Notes                            |
+| -------------- | --------- | -------------------------------- |
+| id             | UUID (PK) |                                  |
+| conversationId | UUID (FK) | References conversations.id      |
+| role           | ENUM      | `user`, `assistant`              |
+| content        | TEXT      | Empty string for audio-only msgs |
+| audioUrl       | VARCHAR   | Nullable, URL to stored audio    |
+| audioDuration  | INTEGER   | Nullable, seconds                |
+| createdAt      | TIMESTAMP |                                  |
 
 ---
 
@@ -71,94 +75,167 @@ All endpoints prefixed with base URL. Authenticated endpoints require: `Authoriz
 ### Auth
 
 #### `POST /auth/register`
+
 ```
 Request:  { email: string, password: string }
 Response: { token: string, user: User }
 ```
+
 - Hash password with bcrypt
 - Generate JWT token
 - Return full user object
 
 #### `POST /auth/login`
+
 ```
 Request:  { email: string, password: string }
 Response: { token: string, user: User }
 ```
+
 - Validate credentials
 - Generate JWT token
 - Include weeklyStreak array in user response
 
 #### `POST /auth/logout`
+
 ```
 Response: { success: boolean, message: string }
 ```
+
 - Logout user (client should delete token)
 - JWT is stateless, so this endpoint confirms logout for API consistency
+
+#### `POST /auth/google`
+
+```
+Request:  { idToken: string, platform: 'android' | 'ios' | 'web' }
+Response: { token: string, user: User }
+```
+
+- Verify Google ID token using `google-auth-library` npm package
+- Use appropriate client ID based on `platform` parameter for verification
+- Extract email, name, picture from verified token payload
+- If user exists by email: return existing user data with new JWT
+- If new user: create account with Google data, set `emailConfirmed: true` (Google already verified)
+- Return JWT token and user object (same format as `/auth/login`)
+
+**Google Client IDs required in env:**
+
+- `GOOGLE_WEB_CLIENT_ID` - For Expo Go / web auth
+- `GOOGLE_ANDROID_CLIENT_ID` - For Android standalone builds
+- `GOOGLE_IOS_CLIENT_ID` - For iOS standalone builds
+
+**Token verification implementation:**
+
+```typescript
+import { OAuth2Client } from "google-auth-library";
+
+const CLIENT_IDS = {
+  web: process.env.GOOGLE_WEB_CLIENT_ID,
+  android: process.env.GOOGLE_ANDROID_CLIENT_ID,
+  ios: process.env.GOOGLE_IOS_CLIENT_ID,
+};
+
+async function verifyGoogleToken(
+  idToken: string,
+  platform: "android" | "ios" | "web",
+) {
+  const client = new OAuth2Client();
+  const ticket = await client.verifyIdToken({
+    idToken,
+    audience: Object.values(CLIENT_IDS).filter(Boolean),
+  });
+  const payload = ticket.getPayload();
+  // payload contains: email, name, picture, sub (Google user ID), email_verified
+  return payload;
+}
+```
+
+**Error responses:**
+
+- 400: "Invalid Google token" - Token verification failed
+- 400: "No email in Google token" - Token missing email claim
 
 ### Profile (all auth required)
 
 #### `GET /me`
+
 ```
 Response: { user: User }
 ```
+
 - Return authenticated user's profile with weeklyStreak array
 - Uses JWT userId to identify the user
 
 #### `PATCH /me`
+
 ```
 Request:  { firstName?: string, lastName?: string, notification?: boolean }
 Response: { success: boolean, message: string, user: User }
 ```
+
 - Update profile fields (at least one field required)
 - Only firstName, lastName, and notification can be updated via this route
 
 #### `DELETE /me`
+
 ```
 Request:  { password: string, confirmDelete: true }
 Response: { success: boolean, message: string }
 ```
+
 - Permanently deletes user account
 - Requires password confirmation for security
 - All related data (conversations, messages, streaks) cascade deleted
 
 #### `POST /change-email`
+
 ```
 Request:  { newEmail: string, password: string }
 Response: { success: boolean, message?: string }
 ```
+
 - Verify current password before changing
 - Set emailConfirmed = false after change
 
 #### `POST /change-password`
+
 ```
 Request:  { currentPassword: string, newPassword: string }
 Response: { success: boolean, message?: string }
 ```
 
 #### `POST /send-verification`
+
 ```
 Request:  { email: string }
 Response: { success: boolean, message?: string }
 ```
+
 - Generate verification token, send email
 
 #### `POST /verify-email`
+
 ```
 Request:  { token: string }
 Response: { success: boolean, message?: string }
 ```
+
 - Validate token, set emailConfirmed = true
 
 ### Chat (all auth required)
 
 #### `GET /chat/conversations`
+
 ```
 Response: Conversation[]
 ```
+
 - Return user's conversations sorted by updatedAt DESC
 - Enforce: only return conversations where userId = authenticated user
 
 #### `POST /chat/conversations`
+
 ```
 Request:  {} (empty body)
 Response: Conversation
@@ -166,18 +243,22 @@ Status:   201
 ```
 
 #### `GET /chat/conversations/:conversationId/messages`
+
 ```
 Response: Message[]
 ```
+
 - Sorted by createdAt ASC (chronological)
 - Verify conversation belongs to authenticated user
 
 #### `POST /chat/messages`
+
 ```
 Request:  { conversationId: string, content: string, audioUrl?: string, audioDuration?: number }
 Response: Message (the saved user message)
 Status:   201
 ```
+
 - Save user message to DB
 - Update conversation.lastMessage and conversation.updatedAt
 - If conversation has no title and content is non-empty, auto-generate title from content (first 50 chars or AI-summarized)
@@ -185,24 +266,29 @@ Status:   201
 - For audio messages: if audioUrl provided, run speech-to-text to get transcript, use that as context for AI
 
 #### `POST /chat/audio`
+
 ```
 Request:  multipart/form-data with field "audio" (file, .m4a format)
 Response: { url: string, duration: number }
 ```
+
 - Store file in S3/cloud storage
 - Detect audio duration (use ffprobe or audio metadata library)
 - Return public CDN URL and duration in seconds
 
 #### `GET /chat/conversations/:conversationId/stream`
+
 SSE endpoint for streaming AI responses.
 
 **Headers required:**
+
 ```
 Authorization: Bearer <token>
 Accept: text/event-stream
 ```
 
 **Response headers:**
+
 ```
 Content-Type: text/event-stream
 Cache-Control: no-cache
@@ -210,6 +296,7 @@ Connection: keep-alive
 ```
 
 **Implementation:**
+
 1. Verify auth and conversation ownership
 2. Get conversation message history from DB
 3. Build AI prompt with message history as context
@@ -235,10 +322,12 @@ Connection: keep-alive
 ### Subscription (auth required)
 
 #### `POST /subscription/verify`
+
 ```
 Request:  { purchaseToken: string, productId: string }
 Response: { success: boolean, message: string, user: User }
 ```
+
 - Verify Google Play purchase and activate subscription
 - Client sends purchase token received from Google Play
 - Backend verifies with Google Play Developer API
@@ -247,6 +336,7 @@ Response: { success: boolean, message: string, user: User }
 ### Streak (auth required, Pro subscription check on frontend)
 
 #### `GET /streak`
+
 ```
 Response: {
   streak: [
@@ -261,10 +351,12 @@ Response: {
   totalVisits: number
 }
 ```
+
 - Returns the current week (Monday to Sunday) with visited status for each day
 - Dates are in YYYY-MM-DD format (UTC)
 
 #### `POST /streak/check-in`
+
 ```
 Request:  {} (empty body)
 Response: {
@@ -274,15 +366,78 @@ Response: {
   totalVisits: number
 }
 ```
+
 - Records today as a visited day
 - Prevents duplicate entries (calling multiple times same day is safe)
 - Returns updated streak data for the current week
+
+### Feedback (NO AUTH REQUIRED)
+
+#### `POST /feedback`
+
+```
+Request:  { feedback?: string, rating?: number, name?: string }
+Response: { success: boolean, message?: string }
+```
+
+- **No authentication required** - accessible to all users including guests
+- Submit user feedback to Google Sheets "Calmisu feedbacks"
+- Rating values: 0 = Poor, 1 = Average, 2 = Great
+- All fields are optional
+- Google Sheets columns (in order): Name, Timestamp, Rating, Feedbacks
+  - **Name**: Optional - passed from frontend if user is logged in, empty for guests
+  - **Timestamp**: Server-generated ISO timestamp
+  - **Rating**: "Poor" | "Average" | "Great" | empty string
+  - **Feedbacks**: User's text feedback (max 300 characters)
+
+**Backend Implementation Notes:**
+
+- Use Google Sheets API v4 with `googleapis` npm package
+- Service account: `calmisu-service-account@calmisu.iam.gserviceaccount.com`
+- Environment variables required:
+  - `GOOGLE_SHEETS_PRIVATE_KEY` - Service account private key (from JSON key file)
+  - `GOOGLE_SHEETS_CLIENT_EMAIL` - Service account email
+  - `GOOGLE_SHEETS_SPREADSHEET_ID` - ID of "Calmisu feedbacks" spreadsheet
+
+**Example implementation:**
+
+```typescript
+import { google } from "googleapis";
+
+const auth = new google.auth.GoogleAuth({
+  credentials: {
+    client_email: process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
+    private_key: process.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+  },
+  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+});
+
+const sheets = google.sheets({ version: "v4", auth });
+
+// Append row to spreadsheet
+await sheets.spreadsheets.values.append({
+  spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID,
+  range: "Sheet1!A:D",
+  valueInputOption: "USER_ENTERED",
+  resource: {
+    values: [
+      [
+        name || "", // Name from request body (optional)
+        new Date().toISOString(),
+        ["Poor", "Average", "Great"][rating] || "",
+        feedback || "",
+      ],
+    ],
+  },
+});
+```
 
 ---
 
 ## Response Formats
 
 ### User object (returned in auth responses)
+
 ```json
 {
   "firstName": "string | null",
@@ -300,6 +455,7 @@ Response: {
 ```
 
 ### Conversation object
+
 ```json
 {
   "id": "uuid",
@@ -311,6 +467,7 @@ Response: {
 ```
 
 ### Message object
+
 ```json
 {
   "id": "uuid",
@@ -324,6 +481,7 @@ Response: {
 ```
 
 ### WeeklyStreakDay object
+
 ```json
 {
   "day": "monday | tuesday | wednesday | thursday | friday | saturday | sunday",
@@ -333,6 +491,7 @@ Response: {
 ```
 
 ### Error response (all error cases)
+
 ```json
 {
   "message": "Human-readable error message",
@@ -381,12 +540,12 @@ The backend runs locally with SQLite instead of PostgreSQL. No API keys needed â
 
 ### Files
 
-| File | Purpose |
-|------|---------|
-| `prisma/schema.test.prisma` | SQLite version of the schema (enums replaced with `String`) |
-| `.env` | Dev env: `DATABASE_URL=file:./prisma/test.db`, port 3001 |
-| `.env.test` | Test env: same DB, `NODE_ENV=test` |
-| `prisma/seed.ts` | Seed script: 3 users, 2 conversations, 4 messages, 5 streaks |
+| File                        | Purpose                                                      |
+| --------------------------- | ------------------------------------------------------------ |
+| `prisma/schema.test.prisma` | SQLite version of the schema (enums replaced with `String`)  |
+| `.env`                      | Dev env: `DATABASE_URL=file:./prisma/test.db`, port 3001     |
+| `.env.test`                 | Test env: same DB, `NODE_ENV=test`                           |
+| `prisma/seed.ts`            | Seed script: 3 users, 2 conversations, 4 messages, 5 streaks |
 
 ### Scripts
 
@@ -411,11 +570,11 @@ npm run dev
 
 All seeded users share the password `Password123!`:
 
-| Email | Role | Subscription |
-|-------|------|--------------|
-| alice@test.com | user | pro |
-| bob@test.com | user | free |
-| admin@test.com | admin | pro |
+| Email          | Role  | Subscription |
+| -------------- | ----- | ------------ |
+| alice@test.com | user  | pro          |
+| bob@test.com   | user  | free         |
+| admin@test.com | admin | pro          |
 
 ### Notes
 

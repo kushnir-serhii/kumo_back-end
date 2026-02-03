@@ -1,8 +1,10 @@
 import { FastifyPluginAsync } from "fastify";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { z } from "zod";
 import { httpError } from "../utils/errors";
 import { formatUserResponse } from "../utils/helpers";
+import { verifyGoogleIdToken } from "../services/google-auth.service";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -12,6 +14,13 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
+});
+
+const googleAuthSchema = z.object({
+  idToken: z.string().min(1, "ID token is required"),
+  platform: z.enum(["android", "ios", "web"], {
+    errorMap: () => ({ message: "Platform must be 'android', 'ios', or 'web'" }),
+  }),
 });
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
@@ -116,6 +125,81 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send({
       success: true,
       message: 'Logged out successfully',
+    });
+  });
+
+  // POST /auth/google
+  fastify.post("/google", async (request, reply) => {
+    const parsed = googleAuthSchema.safeParse(request.body);
+    if (!parsed.success) {
+      httpError(parsed.error.errors[0].message, 400);
+    }
+
+    const { idToken } = parsed.data;
+
+    // Verify the Google ID token
+    const googleUser = await verifyGoogleIdToken(idToken);
+
+    // Find existing user by email
+    let user = await fastify.prisma.user.findUnique({
+      where: { email: googleUser.email },
+      include: {
+        weeklyStreaks: {
+          orderBy: { date: "desc" },
+          take: 7,
+        },
+      },
+    });
+
+    if (user) {
+      // Existing user - update name if missing, confirm email
+      if (!user.firstName || !user.emailConfirmed) {
+        user = await fastify.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            firstName: user.firstName || googleUser.firstName,
+            lastName: user.lastName || googleUser.lastName,
+            emailConfirmed: true,
+          },
+          include: {
+            weeklyStreaks: {
+              orderBy: { date: "desc" },
+              take: 7,
+            },
+          },
+        });
+      }
+    } else {
+      // New user - create account with random password (Google users don't need it)
+      const randomPassword = crypto.randomBytes(32).toString("hex");
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+      user = await fastify.prisma.user.create({
+        data: {
+          email: googleUser.email,
+          password: hashedPassword,
+          firstName: googleUser.firstName,
+          lastName: googleUser.lastName,
+          emailConfirmed: true,
+        },
+        include: {
+          weeklyStreaks: {
+            orderBy: { date: "desc" },
+            take: 7,
+          },
+        },
+      });
+    }
+
+    // Generate JWT token (same format as login)
+    const token = fastify.jwt.sign({
+      userId: user.id,
+      email: user.email,
+    });
+
+    return reply.send({
+      token,
+      user: formatUserResponse(user, user.weeklyStreaks),
     });
   });
 };

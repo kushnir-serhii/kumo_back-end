@@ -5,7 +5,9 @@
       "Bash(npm run db:test:seed:*)",
       "Bash(node -e \"const { execSync } = require\\(''child_process''\\); try { const r = execSync\\(''npx tsx prisma/seed.ts'', { encoding: ''utf8'', stdio: ''pipe'', env: { ...process.env, DATABASE_URL: ''file:./prisma/test.db'' } }\\); console.log\\(r\\); } catch\\(e\\) { console.log\\(''ERR:'', e.stderr || e.stdout || e.message\\); }\")",
       "Bash(node -e \"const { execSync } = require\\(''child_process''\\); try { const r = execSync\\(''npx prisma@5 generate --schema=prisma/schema.test.prisma'', { encoding: ''utf8'', stdio: ''pipe'', env: { ...process.env, DATABASE_URL: ''file:./test.db'' } }\\); console.log\\(r\\); } catch\\(e\\) { console.log\\(''ERR:'', e.message\\); }\")",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npm run build:*)",
+      "Bash(timeout 10s npm run dev:*)"
     ]
   }
 }

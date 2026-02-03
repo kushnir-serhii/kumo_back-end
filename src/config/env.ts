@@ -27,6 +27,13 @@ const envSchema = z.object({
   SMTP_FROM: isProd ? z.string() : optional,
   GOOGLE_SERVICE_ACCOUNT_KEY: isProd ? z.string() : optional,
   ANDROID_PACKAGE_NAME: isProd ? z.string() : optional,
+  GOOGLE_SHEETS_PRIVATE_KEY: isProd ? z.string() : optional,
+  GOOGLE_SHEETS_CLIENT_EMAIL: isProd ? z.string() : optional,
+  GOOGLE_SHEETS_SPREADSHEET_ID: isProd ? z.string() : optional,
+  // Google OAuth Client IDs
+  GOOGLE_WEB_CLIENT_ID: isProd ? z.string() : optional,
+  GOOGLE_ANDROID_CLIENT_ID: isProd ? z.string() : optional,
+  GOOGLE_IOS_CLIENT_ID: isProd ? z.string() : optional,
   PORT: z.string().transform(Number).default('3001'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });

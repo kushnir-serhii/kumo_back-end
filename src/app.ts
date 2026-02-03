@@ -9,6 +9,7 @@ import profileRoutes from './routes/profile';
 import chatRoutes from './routes/chat';
 import subscriptionRoutes from './routes/subscription';
 import streakRoutes from './routes/streak';
+import feedbackRoutes from './routes/feedback';
 
 const buildApp = async () => {
   const fastify = Fastify({
@@ -64,6 +65,7 @@ const buildApp = async () => {
   await fastify.register(chatRoutes, { prefix: '/chat' });
   await fastify.register(subscriptionRoutes, { prefix: '/subscription' });
   await fastify.register(streakRoutes, { prefix: '/streak' });
+  await fastify.register(feedbackRoutes, { prefix: '/feedback' });
 
   // Health check
   fastify.get('/health', async () => ({ status: 'ok' }));
