@@ -10,6 +10,7 @@ export interface UserResponse {
   trialEndsDate: string | null;
   weeklyStreak: { date: string }[];
   role: string;
+  notification: boolean;
   createdAt: string;
 }
 

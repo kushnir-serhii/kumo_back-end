@@ -17,6 +17,7 @@ export function formatUserResponse(
       date: streak.date.toISOString(),
     })),
     role: user.role,
+    notification: user.notification,
     createdAt: user.createdAt.toISOString(),
   };
 }

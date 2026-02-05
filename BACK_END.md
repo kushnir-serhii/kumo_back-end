@@ -591,6 +591,7 @@ All seeded users share the password `Password123!`:
 
 - All dates must be ISO 8601 strings in responses
 - Use UUIDs (v4) for all IDs
+- **CRITICAL: All auth endpoints (`/auth/login`, `/auth/register`, `/auth/google`) MUST return the full `user` object alongside the token.** The mobile app sets `isAuth=true` and `user` from the same response. If `user` is missing, the app enters an invalid state where `isAuth=true` but `user=null`.
 - Conversation.title: auto-generate from first user message (truncate to ~50 chars)
 - Conversation.lastMessage: update with the latest message content on each new message
 - Audio speech-to-text: use OpenAI Whisper or similar to transcribe audio before sending to AI
