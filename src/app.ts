@@ -12,6 +12,7 @@ import subscriptionRoutes from './routes/subscription';
 import streakRoutes from './routes/streak';
 import feedbackRoutes from './routes/feedback';
 import adminRoutes from './routes/admin';
+import legalRoutes from './routes/legal';
 
 const buildApp = async () => {
   const fastify = Fastify({
@@ -92,6 +93,38 @@ const buildApp = async () => {
   await fastify.register(streakRoutes, { prefix: '/streak' });
   await fastify.register(feedbackRoutes, { prefix: '/feedback' });
   await fastify.register(adminRoutes, { prefix: '/admin' });
+  await fastify.register(legalRoutes, { prefix: '/legal' });
+
+  // GET /verify-email?token=xxx — no auth, redirects to app after verifying token
+  fastify.get('/verify-email', async (request, reply) => {
+    const { token } = request.query as { token?: string };
+
+    if (!token) {
+      return reply.redirect('calmisu://email-verified?success=false&error=missing_token');
+    }
+
+    const verificationToken = await fastify.prisma.verificationToken.findUnique({
+      where: { token },
+    });
+
+    if (!verificationToken) {
+      return reply.redirect('calmisu://email-verified?success=false&error=invalid_token');
+    }
+
+    if (verificationToken.expiresAt < new Date()) {
+      await fastify.prisma.verificationToken.delete({ where: { id: verificationToken.id } });
+      return reply.redirect('calmisu://email-verified?success=false&error=expired_token');
+    }
+
+    await fastify.prisma.user.update({
+      where: { id: verificationToken.userId },
+      data: { emailConfirmed: true },
+    });
+
+    await fastify.prisma.verificationToken.delete({ where: { id: verificationToken.id } });
+
+    return reply.redirect('calmisu://email-verified?success=true');
+  });
 
   // Health check
   fastify.get('/health', async () => ({ status: 'ok' }));

@@ -1,4 +1,6 @@
 import OpenAI from 'openai';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import { env } from '../config/env';
 import { httpError } from '../utils/errors';
 
@@ -14,31 +16,18 @@ function getOpenAI(): OpenAI {
   return _openai;
 }
 
-const SYSTEM_PROMPT = `You are Calmisu, a gentle and supportive mental wellness companion. You:
-- Listen with empathy and validate feelings
-- Ask thoughtful follow-up questions
-- Suggest in-app activities when they fit the user's needs (see below)
-- Never diagnose or replace professional mental health support
-- Keep responses concise (2-4 sentences unless the user needs more)
-- Use a warm, calm tone
+const CORE_PROMPT = readFileSync(
+  resolve(__dirname, '../../src/prompts/calmisu-core.md'),
+  'utf-8'
+);
 
-## In-app activities you can recommend
+const ACTIVITIES_PROMPT = readFileSync(
+  resolve(__dirname, '../../src/prompts/calmisu-activities.md'),
+  'utf-8'
+);
 
-When the user feels anxious, overwhelmed, panicked, restless, or needs to calm down, suggest one of these activities **by name only** — do NOT explain how to do the activity or list its steps. The app will guide them.
-
-- **Breathing Guidance** — Best for: panic, anxiety, needing to calm down quickly.
-- **5 Sense Grounding** — Best for: panic attacks, dissociation, intrusive thoughts, feeling disconnected.
-- **Mindful Calligraphy** — Best for: racing thoughts, overthinking, needing focused distraction.
-- **Nature Sounds** — Best for: stress, trouble sleeping, needing a calm background.
-
-## Learn topics available in the app
-
-Mention these by name when relevant, do not explain their content:
-- **Anxiety Basics**, **Panic Attacks**, **Intrusive Thoughts**, **Self Compassion**, **Overthinking & Rumination**
-
-## How to recommend
-
-Say something like: "The **Breathing Guidance** activity in the app might help right now." then stop. Do not describe steps. The app handles everything. Suggest only the most relevant one or two.`;
+// Inject activities section only when the recent conversation contains relevant signals
+const ACTIVITY_KEYWORDS = /anxi|panic|overwhelm|stress|breath|grounding|sleep|racing.thought|intrusive|restless|calm.down|dissociat/i;
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -72,7 +61,11 @@ export function validateMessageTokens(messages: ClientMessage[]): void {
 }
 
 export function buildChatMessages(messages: ClientMessage[]): ChatMessage[] {
-  return [{ role: 'system', content: SYSTEM_PROMPT }, ...messages];
+  const recentText = messages.slice(-3).map(m => m.content).join(' ');
+  const systemContent = ACTIVITY_KEYWORDS.test(recentText)
+    ? `${CORE_PROMPT}\n\n${ACTIVITIES_PROMPT}`
+    : CORE_PROMPT;
+  return [{ role: 'system', content: systemContent }, ...messages];
 }
 
 export async function* streamChatResponse(

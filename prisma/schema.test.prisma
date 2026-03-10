@@ -1,63 +1,63 @@
-generator client {
-  provider = "prisma-client-js"
-}
+// generator client {
+//   provider = "prisma-client-js"
+// }
 
-datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
-}
+// datasource db {
+//   provider = "sqlite"
+//   url      = env("DATABASE_URL")
+// }
 
-model User {
-  id              String    @id @default(uuid())
-  email           String    @unique
-  password        String
-  firstName       String?
-  lastName        String?
-  emailConfirmed  Boolean   @default(false)
-  subscription    String    @default("free")
-  nextPaymentDate DateTime?
-  trialEndsDate   DateTime?
-  productId       String?
-  purchaseToken   String?
-  role            String    @default("user")
-  notification    Boolean   @default(true)
-  pushToken       String?
-  createdAt       DateTime  @default(now())
+// model User {
+//   id              String    @id @default(uuid())
+//   email           String    @unique
+//   password        String
+//   firstName       String?
+//   lastName        String?
+//   emailConfirmed  Boolean   @default(false)
+//   subscription    String    @default("free")
+//   nextPaymentDate DateTime?
+//   trialEndsDate   DateTime?
+//   productId       String?
+//   purchaseToken   String?
+//   role            String    @default("user")
+//   notification    Boolean   @default(true)
+//   pushToken       String?
+//   createdAt       DateTime  @default(now())
 
-  weeklyStreaks      WeeklyStreak[]
-  verificationTokens VerificationToken[]
+//   weeklyStreaks      WeeklyStreak[]
+//   verificationTokens VerificationToken[]
 
-  @@map("users")
-}
+//   @@map("users")
+// }
 
-model WeeklyStreak {
-  id     String   @id @default(uuid())
-  userId String
-  date   DateTime
+// model WeeklyStreak {
+//   id     String   @id @default(uuid())
+//   userId String
+//   date   DateTime
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+//   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("weekly_streaks")
-}
+//   @@map("weekly_streaks")
+// }
 
-model VerificationToken {
-  id        String   @id @default(uuid())
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+// model VerificationToken {
+//   id        String   @id @default(uuid())
+//   userId    String
+//   token     String   @unique
+//   expiresAt DateTime
+//   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+//   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("verification_tokens")
-}
+//   @@map("verification_tokens")
+// }
 
-model Feedback {
-  id        String   @id @default(uuid())
-  name      String?
-  rating    Int?
-  feedback  String?
-  createdAt DateTime @default(now())
+// model Feedback {
+//   id        String   @id @default(uuid())
+//   name      String?
+//   rating    Int?
+//   feedback  String?
+//   createdAt DateTime @default(now())
 
-  @@map("feedbacks")
-}
+//   @@map("feedbacks")
+// }

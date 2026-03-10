@@ -20,6 +20,7 @@ const envSchema = z.object({
   AWS_SECRET_ACCESS_KEY: optional,
   AWS_REGION: z.string().default('us-east-1'),
   AWS_S3_BUCKET: optional,
+  API_URL: isProd ? z.string() : z.string().default('http://localhost:3001'),
   SMTP_HOST: isProd ? z.string() : optional,
   SMTP_PORT: isProd ? z.string().transform(Number) : optionalNum,
   SMTP_USER: isProd ? z.string() : optional,
