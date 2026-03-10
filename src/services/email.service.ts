@@ -12,6 +12,7 @@ function getTransporter(): nodemailer.Transporter {
       host: env.SMTP_HOST,
       port: env.SMTP_PORT,
       secure: env.SMTP_PORT === 465,
+      requireTLS: env.SMTP_PORT !== 465,
       auth: {
         user: env.SMTP_USER,
         pass: env.SMTP_PASS,
@@ -25,18 +26,18 @@ export async function sendVerificationEmail(
   email: string,
   token: string
 ): Promise<void> {
-  const verificationUrl = `${env.NODE_ENV === 'production' ? 'https://kumo.app' : 'http://localhost:3000'}/verify-email?token=${token}`;
+  const verificationUrl = `${env.API_URL}/verify-email?token=${token}`;
 
   await getTransporter().sendMail({
     from: env.SMTP_FROM,
     to: email,
-    subject: 'Verify your Kumo email',
+    subject: 'Verify your Calmisu email',
     html: `
-      <h1>Welcome to Kumo!</h1>
+      <h1>Welcome to Calmisu!</h1>
       <p>Please click the link below to verify your email address:</p>
       <a href="${verificationUrl}">${verificationUrl}</a>
       <p>This link will expire in 24 hours.</p>
-      <p>If you didn't create an account with Kumo, you can safely ignore this email.</p>
+      <p>If you didn't create an account with Calmisu, you can safely ignore this email.</p>
     `,
   });
 }

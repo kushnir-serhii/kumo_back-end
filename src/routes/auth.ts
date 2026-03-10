@@ -201,7 +201,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       email: user.email,
       role: user.role,
     });
-// console.log("USER >>>>>>>>>>>>>>>>>>>>>>>>>.. : ",user)
+
     return reply.send({
       token,
       user: formatUserResponse(user, user.weeklyStreaks),
