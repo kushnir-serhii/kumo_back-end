@@ -10,7 +10,7 @@ const feedbackSchema = z.object({
 });
 
 const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.post('/', async (request, reply) => {
+  fastify.post('/', { config: { rateLimit: { max: 3, timeWindow: '1 hour' } } }, async (request, reply) => {
     const parsed = feedbackSchema.safeParse(request.body);
 
     if (!parsed.success) {

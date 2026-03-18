@@ -58,6 +58,11 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
       data: { subscription: parsed.data.subscription },
     });
 
+    fastify.log.info(
+      { event: 'admin.subscription_changed', targetUserId: id, adminId: request.user.userId, subscription: parsed.data.subscription },
+      'Admin changed user subscription'
+    );
+
     return reply.send({
       success: true,
       message: 'Subscription updated',

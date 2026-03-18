@@ -161,6 +161,8 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id: userId },
     });
 
+    fastify.log.info({ event: 'account.deleted', userId, ip: request.ip }, 'Account deleted');
+
     return reply.send({
       success: true,
       message: 'Account deleted successfully',
@@ -210,6 +212,8 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
+    fastify.log.info({ event: 'account.email_changed', userId, newEmail, ip: request.ip }, 'Email changed');
+
     return reply.send({
       success: true,
       message: 'Email updated successfully',
@@ -249,6 +253,8 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id: userId },
       data: { password: hashedPassword },
     });
+
+    fastify.log.info({ event: 'account.password_changed', userId, ip: request.ip }, 'Password changed');
 
     return reply.send({
       success: true,

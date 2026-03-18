@@ -7,8 +7,24 @@
     <style>
       body {
         font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-        padding: 1em;
         letter-spacing: 0.03em;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 1em 24px;
+      }
+      @media (min-width: 600px) {
+        .container {
+          padding: 1em 48px;
+        }
+      }
+      @media (min-width: 1024px) {
+        .container {
+          padding: 1em 0;
+        }
       }
       p {
         margin: 0.3em 0;
@@ -17,6 +33,7 @@
     </style>
   </head>
   <body>
+    <div class="container">
     <div style="text-align:right; margin-bottom:1em; font-size:0.85em;">
       <a href="?lang=en">EN</a> | <a href="?lang=pl">PL</a> | <strong>UA</strong>
     </div>
@@ -215,5 +232,6 @@
       Додатку або запитання щодо наших практик, будь ласка, зв'яжіться з
       Постачальником послуг електронною поштою: <a href="mailto:calmisuapp@gmail.com">calmisuapp@gmail.com</a>.
     </p>
+    </div>
   </body>
 </html>

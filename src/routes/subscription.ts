@@ -10,7 +10,6 @@ interface RcSubscriberResponse {
     entitlements: {
       pro?: {
         expires_date: string | null;
-        is_active: boolean;
         product_identifier: string;
       };
     };
@@ -65,8 +64,12 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         env.REVENUECAT_SECRET_API_KEY!
       );
       const entitlement = rcData.subscriber.entitlements.pro;
+      const isActive =
+        entitlement != null &&
+        (entitlement.expires_date === null ||
+          new Date(entitlement.expires_date) > new Date());
 
-      if (!entitlement?.is_active) {
+      if (!isActive) {
         const user = await fastify.prisma.user.findUnique({
           where: { id: userId },
           include: { weeklyStreaks: { orderBy: { date: "desc" }, take: 7 } },
@@ -113,8 +116,12 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         env.REVENUECAT_SECRET_API_KEY!
       );
       const entitlement = rcData.subscriber.entitlements.pro;
+      const isActive =
+        entitlement != null &&
+        (entitlement.expires_date === null ||
+          new Date(entitlement.expires_date) > new Date());
 
-      if (!entitlement?.is_active) {
+      if (!isActive) {
         const user = await fastify.prisma.user.update({
           where: { id: userId },
           data: { subscription: "cancelled", nextPaymentDate: null },
