@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { User, WeeklyStreak } from '@prisma/client';
 import { UserResponse, ROLES } from '../types';
 
@@ -25,7 +26,7 @@ export function formatUserResponse(
 }
 
 export function generateVerificationToken(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  return crypto.randomBytes(32).toString('hex');
 }
 
 export function truncateString(str: string, maxLength: number): string {

@@ -27,6 +27,10 @@ const googleAuthSchema = z.object({
   lastName: z.string().nullable().optional(),
 });
 
+// Pre-computed dummy hash to prevent timing side-channel when email doesn't exist.
+// Always run bcrypt.compare regardless of whether the user was found.
+const DUMMY_HASH = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LkdRe2HJ7e6';
+
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /auth/register
   fastify.post("/register", { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (request, reply) => {
@@ -91,14 +95,13 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    if (!user) {
-      httpError("Invalid email", 401);
-    }
+    // Always run bcrypt.compare to prevent timing side-channel when user not found
+    const hashToCompare = user ? user.password : DUMMY_HASH;
+    const isValidPassword = await bcrypt.compare(password, hashToCompare);
 
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
-      httpError("Invalid password", 401);
+    if (!user || !isValidPassword) {
+      fastify.log.warn({ event: 'auth.login.failure', email, ip: request.ip }, 'Failed login attempt');
+      httpError("Invalid email or password", 401);
     }
 
     // Generate JWT
@@ -107,6 +110,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       email: user.email,
       role: user.role,
     });
+
+    fastify.log.info({ event: 'auth.login.success', userId: user.id, ip: request.ip }, 'User logged in');
 
     return reply.send({
       token,

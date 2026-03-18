@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
+import helmet from '@fastify/helmet';
 import { env } from './config/env';
 import prismaPlugin from './plugins/prisma';
 import authPlugin from './plugins/auth';
@@ -16,10 +17,15 @@ import legalRoutes from './routes/legal';
 
 const buildApp = async () => {
   const fastify = Fastify({
-    logger: env.NODE_ENV === 'development',
+    bodyLimit: 512 * 1024, // 512 KB — covers all legitimate JSON payloads
+    logger: env.NODE_ENV === 'development' ? true : { level: 'info' },
   });
 
   // Register plugins
+  await fastify.register(helmet, {
+    contentSecurityPolicy: false, // not needed for a mobile API
+    hsts: { maxAge: 31536000, includeSubDomains: false },
+  });
   await fastify.register(corsPlugin);
   await fastify.register(prismaPlugin);
   await fastify.register(authPlugin);
