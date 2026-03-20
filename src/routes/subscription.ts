@@ -1,4 +1,5 @@
 import { FastifyPluginAsync } from "fastify";
+import { Subscription } from "@prisma/client";
 import { httpError } from "../utils/errors";
 import { formatUserResponse } from "../utils/helpers";
 import { env } from "../config/env";
@@ -197,6 +198,33 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
           await fastify.prisma.user.update({
             where: { id: user.id },
             data: { subscription: "cancelled", nextPaymentDate: null },
+          });
+          break;
+        }
+        case "TRIAL_STARTED": {
+          const trialEndsDate = expiration_at_ms
+            ? new Date(expiration_at_ms)
+            : null;
+          await fastify.prisma.user.update({
+            where: { id: user.id },
+            data: { subscription: Subscription.free_trial, trialEndsDate, productId: product_id },
+          });
+          break;
+        }
+        case "TRIAL_CONVERTED": {
+          const nextPaymentDate = expiration_at_ms
+            ? new Date(expiration_at_ms)
+            : null;
+          await fastify.prisma.user.update({
+            where: { id: user.id },
+            data: { subscription: "pro", nextPaymentDate, trialEndsDate: null, productId: product_id },
+          });
+          break;
+        }
+        case "TRIAL_CANCELLED": {
+          await fastify.prisma.user.update({
+            where: { id: user.id },
+            data: { subscription: "cancelled", trialEndsDate: null, nextPaymentDate: null },
           });
           break;
         }

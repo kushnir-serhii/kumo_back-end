@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
 import { PrismaClient } from '@prisma/client';
-import path from 'path';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -9,18 +9,9 @@ declare module 'fastify' {
   }
 }
 
-function resolveDatasourceUrl(): string | undefined {
-  const url = process.env.DATABASE_URL;
-  if (!url || !url.startsWith('file:')) return undefined;
-  const filePath = url.replace('file:', '');
-  // Prisma CLI resolves file: URLs relative to the schema file location (prisma/).
-  // Resolve relative to the same prisma/ directory so both use the same DB file.
-  return 'file:' + path.resolve('prisma', filePath);
-}
-
 const prismaPlugin: FastifyPluginAsync = async (fastify) => {
-  const datasourceUrl = resolveDatasourceUrl();
-  const prisma = new PrismaClient(datasourceUrl ? { datasourceUrl } : undefined);
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+  const prisma = new PrismaClient({ adapter });
 
   await prisma.$connect();
 
