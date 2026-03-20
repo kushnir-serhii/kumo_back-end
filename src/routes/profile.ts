@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
+import { Subscription } from '@prisma/client';
 import { httpError } from '../utils/errors';
 import { formatUserResponse, generateVerificationToken } from '../utils/helpers';
 import { sendVerificationEmail } from '../services/email.service';
@@ -72,6 +73,15 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
       user = await fastify.prisma.user.update({
         where: { id: userId },
         data: { subscription: 'cancelled' },
+        include: { weeklyStreaks: { orderBy: { date: 'desc' }, take: 7 } },
+      });
+    }
+
+    // Auto-expire free trial if past trialEndsDate
+    if (user!.subscription === Subscription.free_trial && user!.trialEndsDate && new Date(user!.trialEndsDate) < new Date()) {
+      user = await fastify.prisma.user.update({
+        where: { id: userId },
+        data: { subscription: 'cancelled', trialEndsDate: null },
         include: { weeklyStreaks: { orderBy: { date: 'desc' }, take: 7 } },
       });
     }

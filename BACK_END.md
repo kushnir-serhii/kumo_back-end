@@ -353,6 +353,9 @@ Auth:     None (JWT not required). Secured via Authorization header.
 
 | Event type | DB Action |
 |------------|-----------|
+| `TRIAL_STARTED` | Set `subscription: 'free-trial'`, `trialEndsDate` from `expiration_at_ms`, `productId` |
+| `TRIAL_CONVERTED` | Set `subscription: 'pro'`, `nextPaymentDate` from `expiration_at_ms`, `trialEndsDate: null` |
+| `TRIAL_CANCELLED` | Set `subscription: 'cancelled'`, `trialEndsDate: null`, `nextPaymentDate: null` |
 | `INITIAL_PURCHASE` | Set `subscription: 'pro'`, `nextPaymentDate` from `expiration_at_ms`, `productId` from `product_id` |
 | `RENEWAL` | Update `nextPaymentDate` from `expiration_at_ms` |
 | `CANCELLATION` | No immediate change — `nextPaymentDate` intact; `GET /me` handles expiry at period end |
@@ -413,7 +416,7 @@ One-time setup steps to connect RevenueCat to the app and backend.
 1. RC Dashboard → **Project Settings** → **Webhooks** → **Add webhook**.
 2. **Endpoint URL:** `https://your-backend.com/subscription/rc-webhook`
 3. **Authorization header value:** set to your `REVENUECAT_WEBHOOK_SECRET`
-4. Select events: `INITIAL_PURCHASE`, `RENEWAL`, `CANCELLATION`, `EXPIRATION`, `BILLING_ISSUE`, `UNCANCELLATION`
+4. Select events: `INITIAL_PURCHASE`, `RENEWAL`, `CANCELLATION`, `EXPIRATION`, `BILLING_ISSUE`, `UNCANCELLATION`, `TRIAL_STARTED`, `TRIAL_CONVERTED`, `TRIAL_CANCELLED`
 5. Save and send a test event to verify the endpoint responds with `200`.
 
 ---
