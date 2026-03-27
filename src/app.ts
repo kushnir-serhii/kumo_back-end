@@ -14,6 +14,7 @@ import streakRoutes from './routes/streak';
 import feedbackRoutes from './routes/feedback';
 import adminRoutes from './routes/admin';
 import legalRoutes from './routes/legal';
+import flowRoutes from './routes/flow';
 
 const buildApp = async () => {
   const fastify = Fastify({
@@ -100,6 +101,7 @@ const buildApp = async () => {
   await fastify.register(feedbackRoutes, { prefix: '/feedback' });
   await fastify.register(adminRoutes, { prefix: '/admin' });
   await fastify.register(legalRoutes, { prefix: '/legal' });
+  await fastify.register(flowRoutes, { prefix: '/flow' });
 
   // GET /verify-email?token=xxx — no auth, redirects to app after verifying token
   fastify.get('/verify-email', async (request, reply) => {

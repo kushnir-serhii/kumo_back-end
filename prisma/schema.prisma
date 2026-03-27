@@ -38,6 +38,7 @@ model User {
 
   weeklyStreaks   WeeklyStreak[]
   verificationTokens VerificationToken[]
+  flowSessions   FlowSession[]
 
   @@map("users")
 }
@@ -72,4 +73,15 @@ model Feedback {
   createdAt DateTime @default(now())
 
   @@map("feedbacks")
+}
+
+model FlowSession {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  rating      Int?
+  completedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("flow_sessions")
 }
