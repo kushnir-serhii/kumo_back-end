@@ -10,12 +10,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:studio": "prisma studio",
-    "db:local:generate": "prisma generate --schema=prisma/schema.test.prisma",
-    "db:local:push": "prisma db push --schema=prisma/schema.test.prisma",
-    "db:local:studio": "prisma studio --schema=prisma/schema.test.prisma",
-    "db:local:seed": "tsx prisma/seed.ts",
-    "db:local:setup": "npm run db:local:generate && npm run db:local:push && npm run db:local:seed"
+    "db:studio": "prisma studio"
   },
   "keywords": [
     "kumo",

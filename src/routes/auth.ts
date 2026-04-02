@@ -190,6 +190,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           firstName: resolvedFirstName,
           lastName: resolvedLastName,
           emailConfirmed: true,
+          authProvider: 'google',
         },
         include: {
           weeklyStreaks: {

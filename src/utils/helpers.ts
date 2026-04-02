@@ -12,6 +12,7 @@ export function formatUserResponse(
     lastName: user.lastName,
     email: user.email,
     emailConfirmed: user.emailConfirmed,
+    authProvider: user.authProvider,
     role: user.role.replace('_', '-') as UserResponse['role'],
     subscription: user.role === ROLES.SUPER_ADMIN ? 'pro' : user.subscription.replace('_', '-'),
     nextPaymentDate: user.nextPaymentDate?.toISOString() ?? null,
@@ -21,6 +22,7 @@ export function formatUserResponse(
       date: streak.date.toISOString(),
     })),
     notification: user.notification,
+    analyticsConsent: user.analyticsConsent,
     createdAt: user.createdAt.toISOString(),
   };
 }
