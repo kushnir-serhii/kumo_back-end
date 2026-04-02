@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { Subscription } from '@prisma/client';
 import { httpError } from '../utils/errors';
