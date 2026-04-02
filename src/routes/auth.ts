@@ -162,13 +162,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (user) {
       // Existing user - update name if missing, confirm email
-      if (!user.firstName || !user.lastName || !user.emailConfirmed) {
+      if (!user.firstName || !user.lastName || !user.emailConfirmed || user.authProvider !== 'google') {
         user = await fastify.prisma.user.update({
           where: { id: user.id },
           data: {
             firstName: user.firstName || resolvedFirstName,
             lastName: user.lastName || resolvedLastName,
             emailConfirmed: true,
+            authProvider: 'google',
           },
           include: {
             weeklyStreaks: {
