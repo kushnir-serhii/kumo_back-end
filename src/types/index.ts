@@ -13,6 +13,7 @@ export interface UserResponse {
   lastName: string | null;
   email: string;
   emailConfirmed: boolean;
+  authProvider: 'email' | 'google';
   subscription: string;
   nextPaymentDate: string | null;
   trialEndsDate: string | null;
@@ -20,6 +21,7 @@ export interface UserResponse {
   weeklyStreak: { date: string }[];
   role: 'user' | 'admin' | 'super-admin';
   notification: boolean;
+  analyticsConsent: boolean;
   createdAt: string;
 }
 

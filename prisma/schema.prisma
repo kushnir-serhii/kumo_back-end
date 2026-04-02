@@ -19,10 +19,16 @@ enum Role {
   super_admin
 }
 
+enum AuthProvider {
+  email
+  google
+}
+
 model User {
   id              String    @id @default(uuid())
   email           String    @unique
   password        String
+  authProvider    AuthProvider @default(email)
   firstName       String?
   lastName        String?
   emailConfirmed  Boolean   @default(false)
@@ -32,9 +38,10 @@ model User {
   productId       String?
   purchaseToken   String?
   role            Role      @default(user)
-  notification    Boolean   @default(true)
-  pushToken       String?
-  createdAt       DateTime  @default(now())
+  notification      Boolean   @default(false)
+  analyticsConsent  Boolean   @default(false)
+  pushToken         String?
+  createdAt         DateTime  @default(now())
 
   weeklyStreaks   WeeklyStreak[]
   verificationTokens VerificationToken[]

@@ -2,9 +2,7 @@ import { z } from 'zod';
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Load .env.test when NODE_ENV=test, otherwise .env
-const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
-dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -39,7 +37,7 @@ const envSchema = z.object({
   GOOGLE_ANDROID_CLIENT_ID: optional,
   GOOGLE_IOS_CLIENT_ID: optional,
   PORT: z.string().transform(Number).default('3001'),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z.enum(['development', 'production']).default('development'),
 });
 
 const parsed = envSchema.safeParse(process.env);

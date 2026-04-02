@@ -29,9 +29,14 @@ const updateProfileSchema = z
     firstName: z.string().min(1).max(50).optional(),
     lastName: z.string().min(1).max(50).optional(),
     notification: z.boolean().optional(),
+    analyticsConsent: z.boolean().optional(),
   })
   .refine(
-    (data) => data.firstName !== undefined || data.lastName !== undefined || data.notification !== undefined,
+    (data) =>
+      data.firstName !== undefined ||
+      data.lastName !== undefined ||
+      data.notification !== undefined ||
+      data.analyticsConsent !== undefined,
     { message: 'At least one field must be provided' }
   );
 
@@ -99,12 +104,13 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const userId = request.user.userId;
-    const { firstName, lastName, notification } = parsed.data;
+    const { firstName, lastName, notification, analyticsConsent } = parsed.data;
 
-    const updateData: { firstName?: string; lastName?: string; notification?: boolean } = {};
+    const updateData: { firstName?: string; lastName?: string; notification?: boolean; analyticsConsent?: boolean } = {};
     if (firstName !== undefined) updateData.firstName = firstName;
     if (lastName !== undefined) updateData.lastName = lastName;
     if (notification !== undefined) updateData.notification = notification;
+    if (analyticsConsent !== undefined) updateData.analyticsConsent = analyticsConsent;
 
     const user = await fastify.prisma.user.update({
       where: { id: userId },

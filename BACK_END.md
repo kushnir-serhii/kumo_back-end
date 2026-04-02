@@ -27,6 +27,7 @@ This is the backend for **Kumo** - a mental wellness React Native app (Expo). Th
 | id              | UUID (PK) | Auto-generated                           |
 | email           | VARCHAR   | Unique, required                         |
 | password        | VARCHAR   | Hashed (bcrypt, 10 rounds)               |
+| authProvider    | ENUM      | `email`, `google`. Default: `email`      |
 | firstName       | VARCHAR   | Nullable                                 |
 | lastName        | VARCHAR   | Nullable                                 |
 | emailConfirmed  | BOOLEAN   | Default: false                           |
