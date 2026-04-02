@@ -45,7 +45,6 @@ const pushTokenSchema = z.object({
 });
 
 const deleteAccountSchema = z.object({
-  password: z.string().min(1, 'Password is required'),
   confirmDelete: z.literal(true, {
     errorMap: () => ({ message: 'You must confirm account deletion' }),
   }),
@@ -155,7 +154,6 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
       httpError(parsed.error.errors[0].message, 400);
     }
 
-    const { password } = parsed.data;
     const userId = request.user.userId;
 
     const user = await fastify.prisma.user.findUnique({
@@ -164,12 +162,6 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (!user) {
       httpError('User not found', 404);
-    }
-
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
-      httpError('Invalid password', 400);
     }
 
     // Delete user (cascades to related records)
