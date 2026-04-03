@@ -1,27 +1,30 @@
-import { FastifyPluginAsync } from 'fastify';
-import bcrypt from 'bcryptjs';
-import { z } from 'zod';
-import { Subscription } from '@prisma/client';
-import { httpError } from '../utils/errors';
-import { formatUserResponse, generateVerificationToken } from '../utils/helpers';
-import { sendVerificationEmail } from '../services/email.service';
+import { FastifyPluginAsync } from "fastify";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { Subscription } from "@prisma/client";
+import { httpError } from "../utils/errors";
+import {
+  formatUserResponse,
+  generateVerificationToken,
+} from "../utils/helpers";
+import { sendVerificationEmail } from "../services/email.service";
 
 const changeEmailSchema = z.object({
-  newEmail: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
+  newEmail: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
 });
 
 const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z.string().min(6, 'New password must be at least 6 characters'),
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(6, "New password must be at least 6 characters"),
 });
 
 const sendVerificationSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().email("Invalid email address"),
 });
 
 const verifyEmailSchema = z.object({
-  token: z.string().min(1, 'Token is required'),
+  token: z.string().min(1, "Token is required"),
 });
 
 const updateProfileSchema = z
@@ -37,56 +40,64 @@ const updateProfileSchema = z
       data.lastName !== undefined ||
       data.notification !== undefined ||
       data.analyticsConsent !== undefined,
-    { message: 'At least one field must be provided' }
+    { message: "At least one field must be provided" },
   );
 
 const pushTokenSchema = z.object({
-  token: z.string().min(1, 'Push token is required'),
+  token: z.string().min(1, "Push token is required"),
 });
 
 const deleteAccountSchema = z.object({
   confirmDelete: z.literal(true, {
-    errorMap: () => ({ message: 'You must confirm account deletion' }),
+    errorMap: () => ({ message: "You must confirm account deletion" }),
   }),
 });
 
 const profileRoutes: FastifyPluginAsync = async (fastify) => {
   // All routes require authentication
-  fastify.addHook('onRequest', fastify.authenticate);
+  fastify.addHook("onRequest", fastify.authenticate);
 
   // GET /me - Get current user profile
-  fastify.get('/me', async (request, reply) => {
+  fastify.get("/me", async (request, reply) => {
     const userId = request.user.userId;
 
     let user = await fastify.prisma.user.findUnique({
       where: { id: userId },
       include: {
         weeklyStreaks: {
-          orderBy: { date: 'desc' },
+          orderBy: { date: "desc" },
           take: 7,
         },
       },
     });
 
     if (!user) {
-      httpError('User not found', 404);
+      httpError("User not found", 404);
     }
 
     // Auto-expire subscription if past nextPaymentDate (safety net for missed RC webhooks)
-    if (user!.subscription === 'pro' && user!.nextPaymentDate && new Date(user!.nextPaymentDate) < new Date()) {
+    if (
+      user!.subscription === "pro" &&
+      user!.nextPaymentDate &&
+      new Date(user!.nextPaymentDate) < new Date()
+    ) {
       user = await fastify.prisma.user.update({
         where: { id: userId },
-        data: { subscription: 'cancelled' },
-        include: { weeklyStreaks: { orderBy: { date: 'desc' }, take: 7 } },
+        data: { subscription: "cancelled" },
+        include: { weeklyStreaks: { orderBy: { date: "desc" }, take: 7 } },
       });
     }
 
     // Auto-expire free trial if past trialEndsDate
-    if (user!.subscription === Subscription.free_trial && user!.trialEndsDate && new Date(user!.trialEndsDate) < new Date()) {
+    if (
+      user!.subscription === Subscription.free_trial &&
+      user!.trialEndsDate &&
+      new Date(user!.trialEndsDate) < new Date()
+    ) {
       user = await fastify.prisma.user.update({
         where: { id: userId },
-        data: { subscription: 'cancelled', trialEndsDate: null },
-        include: { weeklyStreaks: { orderBy: { date: 'desc' }, take: 7 } },
+        data: { subscription: "cancelled", trialEndsDate: null },
+        include: { weeklyStreaks: { orderBy: { date: "desc" }, take: 7 } },
       });
     }
 
@@ -96,7 +107,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // PATCH /me - Update profile (firstName, lastName, notification)
-  fastify.patch('/me', async (request, reply) => {
+  fastify.patch("/me", async (request, reply) => {
     const parsed = updateProfileSchema.safeParse(request.body);
     if (!parsed.success) {
       httpError(parsed.error.errors[0].message, 400);
@@ -105,18 +116,24 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = request.user.userId;
     const { firstName, lastName, notification, analyticsConsent } = parsed.data;
 
-    const updateData: { firstName?: string; lastName?: string; notification?: boolean; analyticsConsent?: boolean } = {};
+    const updateData: {
+      firstName?: string;
+      lastName?: string;
+      notification?: boolean;
+      analyticsConsent?: boolean;
+    } = {};
     if (firstName !== undefined) updateData.firstName = firstName;
     if (lastName !== undefined) updateData.lastName = lastName;
     if (notification !== undefined) updateData.notification = notification;
-    if (analyticsConsent !== undefined) updateData.analyticsConsent = analyticsConsent;
+    if (analyticsConsent !== undefined)
+      updateData.analyticsConsent = analyticsConsent;
 
     const user = await fastify.prisma.user.update({
       where: { id: userId },
       data: updateData,
       include: {
         weeklyStreaks: {
-          orderBy: { date: 'desc' },
+          orderBy: { date: "desc" },
           take: 7,
         },
       },
@@ -124,13 +141,13 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
 
     return reply.send({
       success: true,
-      message: 'Profile updated successfully',
+      message: "Profile updated successfully",
       user: formatUserResponse(user, user.weeklyStreaks),
     });
   });
 
   // POST /push-token - Store Expo push token
-  fastify.post('/push-token', async (request, reply) => {
+  fastify.post("/push-token", async (request, reply) => {
     const parsed = pushTokenSchema.safeParse(request.body);
     if (!parsed.success) {
       httpError(parsed.error.errors[0].message, 400);
@@ -148,7 +165,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // DELETE /me - Delete user account
-  fastify.delete('/me', async (request, reply) => {
+  fastify.delete("/me", async (request, reply) => {
     const parsed = deleteAccountSchema.safeParse(request.body);
     if (!parsed.success) {
       httpError(parsed.error.errors[0].message, 400);
@@ -161,7 +178,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!user) {
-      httpError('User not found', 404);
+      httpError("User not found", 404);
     }
 
     // Delete user (cascades to related records)
@@ -169,16 +186,19 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id: userId },
     });
 
-    fastify.log.info({ event: 'account.deleted', userId, ip: request.ip }, 'Account deleted');
+    fastify.log.info(
+      { event: "account.deleted", userId, ip: request.ip },
+      "Account deleted",
+    );
 
     return reply.send({
       success: true,
-      message: 'Account deleted successfully',
+      message: "Account deleted successfully",
     });
   });
 
   // POST /change-email
-  fastify.post('/change-email', async (request, reply) => {
+  fastify.post("/change-email", async (request, reply) => {
     const parsed = changeEmailSchema.safeParse(request.body);
     if (!parsed.success) {
       httpError(parsed.error.errors[0].message, 400);
@@ -193,13 +213,13 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!user) {
-      httpError('User not found', 404);
+      httpError("User not found", 404);
     }
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
-      httpError('Invalid password', 400);
+      httpError("Invalid password", 400);
     }
 
     // Check if new email is already taken
@@ -208,7 +228,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (existingUser && existingUser.id !== userId) {
-      httpError('Email already in use', 400);
+      httpError("Email already in use", 400);
     }
 
     // Update email and reset emailConfirmed
@@ -220,16 +240,19 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    fastify.log.info({ event: 'account.email_changed', userId, newEmail, ip: request.ip }, 'Email changed');
+    fastify.log.info(
+      { event: "account.email_changed", userId, newEmail, ip: request.ip },
+      "Email changed",
+    );
 
     return reply.send({
       success: true,
-      message: 'Email updated successfully',
+      message: "Email updated successfully",
     });
   });
 
   // POST /change-password
-  fastify.post('/change-password', async (request, reply) => {
+  fastify.post("/change-password", async (request, reply) => {
     const parsed = changePasswordSchema.safeParse(request.body);
     if (!parsed.success) {
       httpError(parsed.error.errors[0].message, 400);
@@ -244,13 +267,16 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!user) {
-      httpError('User not found', 404);
+      httpError("User not found", 404);
     }
 
     // Verify current password
-    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+    const isValidPassword = await bcrypt.compare(
+      currentPassword,
+      user.password,
+    );
     if (!isValidPassword) {
-      httpError('Current password is incorrect', 400);
+      httpError("Current password is incorrect", 400);
     }
 
     // Hash new password
@@ -262,16 +288,19 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
       data: { password: hashedPassword },
     });
 
-    fastify.log.info({ event: 'account.password_changed', userId, ip: request.ip }, 'Password changed');
+    fastify.log.info(
+      { event: "account.password_changed", userId, ip: request.ip },
+      "Password changed",
+    );
 
     return reply.send({
       success: true,
-      message: 'Password updated successfully',
+      message: "Password updated successfully",
     });
   });
 
   // POST /send-verification
-  fastify.post('/send-verification', async (request, reply) => {
+  fastify.post("/send-verification", async (request, reply) => {
     const parsed = sendVerificationSchema.safeParse(request.body);
     if (!parsed.success) {
       httpError(parsed.error.errors[0].message, 400);
@@ -286,11 +315,11 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!user || user.email !== email) {
-      httpError('Email does not match your account', 400);
+      httpError("Email does not match your account", 400);
     }
 
     if (user.emailConfirmed) {
-      httpError('Email is already verified', 400);
+      httpError("Email is already verified", 400);
     }
 
     // Delete any existing tokens for this user
@@ -315,12 +344,12 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
 
     return reply.send({
       success: true,
-      message: 'Verification email sent',
+      message: "Verification email sent",
     });
   });
 
   // POST /verify-email
-  fastify.post('/verify-email', async (request, reply) => {
+  fastify.post("/verify-email", async (request, reply) => {
     const parsed = verifyEmailSchema.safeParse(request.body);
     if (!parsed.success) {
       httpError(parsed.error.errors[0].message, 400);
@@ -329,13 +358,15 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
     const { token } = parsed.data;
 
     // Find token
-    const verificationToken = await fastify.prisma.verificationToken.findUnique({
-      where: { token },
-      include: { user: true },
-    });
+    const verificationToken = await fastify.prisma.verificationToken.findUnique(
+      {
+        where: { token },
+        include: { user: true },
+      },
+    );
 
     if (!verificationToken) {
-      httpError('Invalid verification token', 400);
+      httpError("Invalid verification token", 400);
     }
 
     if (verificationToken.expiresAt < new Date()) {
@@ -343,7 +374,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
       await fastify.prisma.verificationToken.delete({
         where: { id: verificationToken.id },
       });
-      httpError('Verification token has expired', 400);
+      httpError("Verification token has expired", 400);
     }
 
     // Update user's emailConfirmed status
@@ -359,7 +390,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
 
     return reply.send({
       success: true,
-      message: 'Email verified successfully',
+      message: "Email verified successfully",
     });
   });
 };

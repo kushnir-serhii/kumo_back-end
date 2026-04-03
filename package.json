@@ -5,12 +5,22 @@
   "main": "dist/app.js",
   "scripts": {
     "dev": "tsx watch src/app.ts",
+    "dev:local": "dotenv -e .env.local -- tsx watch src/app.ts",
     "build": "prisma generate && tsc && cp -r src/docs dist/docs",
     "start": "node dist/app.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:local:migrate": "dotenv -e .env.local -- prisma migrate dev",
+    "db:local:push": "dotenv -e .env.local -- prisma db push",
+    "db:local:studio": "dotenv -e .env.local -- prisma studio",
+    "db:local:reset": "dotenv -e .env.local -- prisma migrate reset",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:stop": "docker compose stop",
+    "docker:logs": "docker compose logs -f postgres",
+    "docker:reset": "docker compose down -v && docker compose up -d"
   },
   "keywords": [
     "kumo",
