@@ -27,7 +27,7 @@ const ACTIVITIES_PROMPT = readFileSync(
 );
 
 // Inject activities section only when the recent conversation contains relevant signals
-const ACTIVITY_KEYWORDS = /anxi|panic|overwhelm|stress|breath|grounding|sleep|racing.thought|intrusive|restless|calm.down|dissociat/i;
+const ACTIVITY_KEYWORDS = /anxi|panic|overwhelm|stress|breath|grounding|sleep|racing.thought|intrusive|restless|calm|dissociat|sad|depress|tension|worry|fear|exhausted|tired|help/i;
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
