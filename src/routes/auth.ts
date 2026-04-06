@@ -3,8 +3,9 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { z } from "zod";
 import { httpError } from "../utils/errors";
-import { formatUserResponse } from "../utils/helpers";
+import { formatUserResponse, generateVerificationToken } from "../utils/helpers";
 import { verifyGoogleIdToken } from "../services/google-auth.service";
+import { sendPasswordResetEmail } from "../services/email.service";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -213,6 +214,111 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       token,
       user: formatUserResponse(user, user.weeklyStreaks),
     });
+  });
+  // POST /auth/forgot-password
+  fastify.post("/forgot-password", async (request, reply) => {
+    const parsed = z.object({ email: z.string().email() }).safeParse(request.body);
+    if (!parsed.success) {
+      httpError(parsed.error.errors[0].message, 400);
+    }
+
+    const { email } = parsed.data;
+
+    const user = await fastify.prisma.user.findUnique({ where: { email } });
+
+    // Always return 200 to avoid email enumeration
+    if (!user) {
+      return reply.send({
+        success: true,
+        message: "If this email is registered, you will receive a reset link.",
+      });
+    }
+
+    // Delete any existing reset tokens for this user
+    await fastify.prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
+
+    // Generate new token with 1-hour expiry
+    const token = generateVerificationToken();
+    await fastify.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        token,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    });
+
+    try {
+      await sendPasswordResetEmail(email, token);
+    } catch (err) {
+      fastify.log.error({ err, userId: user.id }, "Failed to send password reset email");
+    }
+
+    return reply.send({
+      success: true,
+      message: "If this email is registered, you will receive a reset link.",
+    });
+  });
+
+  // GET /auth/password-reset-redirect
+  fastify.get("/password-reset-redirect", async (request, reply) => {
+    const { token } = request.query as { token?: string };
+
+    if (!token) {
+      return reply.redirect(`calmisu://password-reset?error=missing_token`);
+    }
+
+    const resetToken = await fastify.prisma.passwordResetToken.findUnique({
+      where: { token },
+    });
+
+    if (!resetToken) {
+      return reply.redirect(`calmisu://password-reset?error=invalid_token`);
+    }
+
+    if (resetToken.expiresAt < new Date()) {
+      await fastify.prisma.passwordResetToken.delete({ where: { token } });
+      return reply.redirect(`calmisu://password-reset?error=expired_token`);
+    }
+
+    return reply.redirect(`calmisu://password-reset?token=${token}`);
+  });
+
+  // POST /auth/reset-password
+  fastify.post("/reset-password", async (request, reply) => {
+    const parsed = z.object({
+      token: z.string().min(1, "Token is required"),
+      newPassword: z.string().min(6, "Password must be at least 6 characters"),
+    }).safeParse(request.body);
+
+    if (!parsed.success) {
+      httpError(parsed.error.errors[0].message, 400);
+    }
+
+    const { token, newPassword } = parsed.data;
+
+    const resetToken = await fastify.prisma.passwordResetToken.findUnique({
+      where: { token },
+    });
+
+    if (!resetToken) {
+      httpError("Invalid or expired reset link", 400);
+    }
+
+    if (resetToken.expiresAt < new Date()) {
+      await fastify.prisma.passwordResetToken.delete({ where: { token } });
+      httpError("Reset link has expired", 400);
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await fastify.prisma.user.update({
+      where: { id: resetToken.userId },
+      data: { password: hashedPassword },
+    });
+
+    await fastify.prisma.passwordResetToken.delete({ where: { token } });
+
+    return reply.send({ success: true, message: "Password has been reset." });
   });
 };
 

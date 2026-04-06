@@ -41,3 +41,23 @@ export async function sendVerificationEmail(
     `,
   });
 }
+
+export async function sendPasswordResetEmail(
+  email: string,
+  token: string
+): Promise<void> {
+  const resetUrl = `${env.API_URL}/auth/password-reset-redirect?token=${token}`;
+
+  await getTransporter().sendMail({
+    from: env.SMTP_FROM,
+    to: email,
+    subject: 'Reset your Calmisu password',
+    html: `
+      <h1>Reset your password</h1>
+      <p>Click the link below to reset your Calmisu password:</p>
+      <a href="${resetUrl}">${resetUrl}</a>
+      <p>This link will expire in 1 hour.</p>
+      <p>If you didn't request a password reset, you can safely ignore this email.</p>
+    `,
+  });
+}
