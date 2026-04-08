@@ -59,6 +59,16 @@ This is the backend for **Kumo** - a mental wellness React Native app (Expo). Th
 | expiresAt | TIMESTAMP | 24-hour TTL         |
 | createdAt | TIMESTAMP |                     |
 
+### password_reset_tokens
+
+| Column    | Type      | Notes               |
+| --------- | --------- | ------------------- |
+| id        | UUID (PK) |                     |
+| userId    | UUID (FK) | References users.id |
+| token     | VARCHAR   | Unique              |
+| expiresAt | TIMESTAMP | 1-hour TTL          |
+| createdAt | TIMESTAMP |                     |
+
 > **Note:** `conversations` and `messages` tables are not yet implemented. The chat endpoint is stateless — the client sends full message history in each request.
 
 ---
@@ -92,6 +102,41 @@ Response: { token: string, user: User }
 - Validate credentials
 - Generate JWT token
 - Include weeklyStreak array in user response
+
+#### `POST /auth/forgot-password`
+
+```
+Request:  { email: string }
+Response: { success: true, message: string }
+```
+
+- Always returns 200 regardless of whether the email exists (prevents enumeration)
+- Deletes any existing reset tokens for the user
+- Generates token with 1-hour expiry, sends reset email via SMTP
+- Email contains link to `GET /auth/password-reset-redirect?token=...`
+
+#### `GET /auth/password-reset-redirect`
+
+```
+Query:    token=<string>
+Response: 302 redirect to calmisu://password-reset?token=... (valid)
+          302 redirect to calmisu://password-reset?error=expired_token (expired)
+          302 redirect to calmisu://password-reset?error=invalid_token (not found)
+          302 redirect to calmisu://password-reset?error=missing_token (no token param)
+```
+
+- Validates token; redirects to app deep link
+
+#### `POST /auth/reset-password`
+
+```
+Request:  { token: string, newPassword: string }
+Response: { success: boolean, message: string }
+```
+
+- Validates token exists and is not expired
+- Hashes new password with bcrypt (10 rounds), updates user, deletes token (single-use)
+- newPassword min 6 characters
 
 #### `POST /auth/logout`
 

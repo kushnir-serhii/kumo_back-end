@@ -43,9 +43,10 @@ model User {
   pushToken         String?
   createdAt         DateTime  @default(now())
 
-  weeklyStreaks   WeeklyStreak[]
-  verificationTokens VerificationToken[]
-  flowSessions   FlowSession[]
+  weeklyStreaks        WeeklyStreak[]
+  verificationTokens  VerificationToken[]
+  passwordResetTokens PasswordResetToken[]
+  flowSessions        FlowSession[]
 
   @@map("users")
 }
@@ -70,6 +71,18 @@ model VerificationToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }
 
 model Feedback {
