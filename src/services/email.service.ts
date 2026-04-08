@@ -1,26 +1,23 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { env } from '../config/env';
 
-let _resend: Resend | null = null;
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: env.SMTP_USER,
+    pass: env.SMTP_PASS,
+  },
+});
 
-function getResend(): Resend {
-  if (!_resend) {
-    if (!env.RESEND_API_KEY) {
-      throw new Error('RESEND_API_KEY is not configured');
-    }
-    _resend = new Resend(env.RESEND_API_KEY);
-  }
-  return _resend;
-}
+const from = `"Calmisu" <${env.SMTP_USER}>`;
 
 export async function sendVerificationEmail(
   email: string,
   token: string
 ): Promise<void> {
   const verificationUrl = `${env.API_URL}/verify-email?token=${token}`;
-
-  await getResend().emails.send({
-    from: env.SMTP_FROM ?? 'Calmisu <noreply@calmisu.app>',
+  const info = await transporter.sendMail({
+    from,
     to: email,
     subject: 'Verify your Calmisu email',
     html: `
@@ -31,6 +28,7 @@ export async function sendVerificationEmail(
       <p>If you didn't create an account with Calmisu, you can safely ignore this email.</p>
     `,
   });
+  console.log('[Nodemailer] sendVerificationEmail sent, messageId:', info.messageId);
 }
 
 export async function sendPasswordResetEmail(
@@ -38,9 +36,8 @@ export async function sendPasswordResetEmail(
   token: string
 ): Promise<void> {
   const resetUrl = `${env.API_URL}/auth/password-reset-redirect?token=${token}`;
-
-  await getResend().emails.send({
-    from: env.SMTP_FROM ?? 'Calmisu <noreply@calmisu.app>',
+  await transporter.sendMail({
+    from,
     to: email,
     subject: 'Reset your Calmisu password',
     html: `

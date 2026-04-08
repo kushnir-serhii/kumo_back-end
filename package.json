@@ -50,16 +50,17 @@
     "google-auth-library": "^9.0.0",
     "googleapis": "^170.1.0",
     "music-metadata": "^11.12.3",
+    "nodemailer": "^8.0.5",
     "openai": "^4.0.0",
     "pg": "^8.20.0",
     "prisma": "^7.6.0",
-    "resend": "^6.10.0",
     "typescript": "^6.0.0",
     "uuid": "^9.0.0",
     "zod": "^3.0.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/nodemailer": "^8.0.0",
     "dotenv-cli": "^7.0.0",
     "ts-node": "^10.0.0",
     "tsx": "^4.0.0"

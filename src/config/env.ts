@@ -19,8 +19,8 @@ const envSchema = z.object({
   AWS_REGION: z.string().default('us-east-1'),
   AWS_S3_BUCKET: optional,
   API_URL: isProd ? z.string() : z.string().default('http://localhost:3001'),
-  RESEND_API_KEY: isProd ? z.string() : optional,
-  SMTP_FROM: optional,
+  SMTP_USER: isProd ? z.string() : optional,
+  SMTP_PASS: isProd ? z.string() : optional,
   // RevenueCat (subscription management)
   REVENUECAT_SECRET_API_KEY: isProd ? z.string() : optional,
   REVENUECAT_WEBHOOK_SECRET: isProd ? z.string() : optional,
