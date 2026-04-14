@@ -41,6 +41,7 @@ model User {
   notification      Boolean   @default(false)
   analyticsConsent  Boolean   @default(false)
   pushToken         String?
+  chatMessageCount  Int       @default(0)
   createdAt         DateTime  @default(now())
 
   weeklyStreaks        WeeklyStreak[]
