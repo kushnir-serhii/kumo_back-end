@@ -2,6 +2,7 @@ import { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { buildChatMessages, streamChatResponse, validateMessageTokens } from '../services/chat.service';
 import { httpError } from '../utils/errors';
+import { env } from '../config/env';
 
 const chatStreamSchema = z.object({
   messages: z
@@ -37,7 +38,19 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
     }
     
     const { messages } = parsed.data;
-    
+
+    const userId = (request.user as any).userId as string;
+
+    // Enforce per-subscription message limit before SSE headers are written
+    const user = await fastify.prisma.user.findUnique({
+      where: { id: userId },
+      select: { subscription: true, chatMessageCount: true },
+    });
+
+    if (user?.subscription === 'free' && user.chatMessageCount >= env.FREE_CHAT_MESSAGE_LIMIT) {
+      return httpError('Chat message limit reached for free plan', 403);
+    }
+
     console.log("Parsed chat stream data:", messages);
     validateMessageTokens(messages);
 
@@ -74,6 +87,14 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Send end signal
       reply.raw.write('data: [DONE]\n\n');
+
+      // Increment message count for free users
+      if (user?.subscription === 'free') {
+        await fastify.prisma.user.update({
+          where: { id: userId },
+          data: { chatMessageCount: { increment: 1 } },
+        });
+      }
     } catch (error) {
       console.error('Stream error:', error);
       reply.raw.write(

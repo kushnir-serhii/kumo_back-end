@@ -33,6 +33,7 @@ const envSchema = z.object({
   GOOGLE_WEB_CLIENT_ID: optional,
   GOOGLE_ANDROID_CLIENT_ID: optional,
   GOOGLE_IOS_CLIENT_ID: optional,
+  FREE_CHAT_MESSAGE_LIMIT: z.string().transform(Number).default('10'),
   PORT: z.string().transform(Number).default('3001'),
   NODE_ENV: z.enum(['development', 'production']).default('development'),
 });

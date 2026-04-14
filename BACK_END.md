@@ -306,6 +306,7 @@ Request:  { messages: Array<{ role: 'user' | 'assistant', content: string }> }
 - Total context limit: 4,000 estimated tokens across all messages
 - Auth required
 - Rate limited: 20 requests per hour per user
+- **Subscription limit:** `free` users capped at `FREE_CHAT_MESSAGE_LIMIT` lifetime messages (default: 10). Returns `403` with `"Chat message limit reached for free plan"` when exceeded. Counter increments on successful stream only.
 
 **Response headers:**
 
