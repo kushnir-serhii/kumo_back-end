@@ -46,6 +46,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     // Check if user already exists
     const existingUser = await fastify.prisma.user.findUnique({
       where: { email },
+      select: { id: true },
     });
     
     if (existingUser) {
@@ -76,7 +77,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
   });
 
-  // POST /auth/login
+  // POST /auth/login =======================================================================
   fastify.post("/login", { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
     const parsed = loginSchema.safeParse(request.body);
     if (!parsed.success) {
@@ -120,7 +121,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
   });
 
-  // POST /auth/logout
+  // POST /auth/logout ===============================================================
   fastify.post("/logout", async (_request, reply) => {
     // JWT is stateless - client should delete token
     // This endpoint confirms logout and can be extended for token blacklisting
@@ -130,26 +131,26 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
   });
 
-  // POST /auth/google
+  // POST /auth/google ================================================================
   fastify.post("/google", { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
     const parsed = googleAuthSchema.safeParse(request.body);
     if (!parsed.success) {
       httpError(parsed.error.errors[0].message, 400);
     }
-
+    
     const {
       idToken,
       firstName: clientFirstName,
       lastName: clientLastName,
     } = parsed.data;
-
+    
     // Verify the Google ID token
     const googleUser = await verifyGoogleIdToken(idToken);
-
+    
     // Prefer token claims; fall back to client-provided values from the Google SDK
     const resolvedFirstName = googleUser.firstName || clientFirstName || null;
     const resolvedLastName = googleUser.lastName || clientLastName || null;
-
+    
     // Find existing user by email
     let user = await fastify.prisma.user.findUnique({
       where: { email: googleUser.email },
@@ -160,7 +161,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     });
-
+    
     if (user) {
       // Existing user - update name if missing, confirm email
       if (!user.firstName || !user.lastName || !user.emailConfirmed || user.authProvider !== 'google') {
@@ -184,7 +185,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       // New user - create account with random password (Google users don't need it)
       const randomPassword = crypto.randomBytes(32).toString("hex");
       const hashedPassword = await bcrypt.hash(randomPassword, 10);
-
+      
       user = await fastify.prisma.user.create({
         data: {
           email: googleUser.email,
@@ -215,7 +216,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       user: formatUserResponse(user, user.weeklyStreaks),
     });
   });
-  // POST /auth/forgot-password
+
+  // POST /auth/forgot-password ===========================================================
   fastify.post("/forgot-password", async (request, reply) => {
     const parsed = z.object({ email: z.string().email() }).safeParse(request.body);
     if (!parsed.success) {
@@ -224,7 +226,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     const { email } = parsed.data;
 
-    const user = await fastify.prisma.user.findUnique({ where: { email } });
+    const user = await fastify.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
 
     // Always return 200 to avoid email enumeration
     if (!user) {
@@ -259,7 +264,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
   });
 
-  // GET /auth/password-reset-redirect
+  // GET /auth/password-reset-redirect ================================================
   fastify.get("/password-reset-redirect", async (request, reply) => {
     const { token } = request.query as { token?: string };
 
@@ -283,7 +288,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.redirect(`calmisu://password-reset?token=${token}`);
   });
 
-  // POST /auth/reset-password
+  // POST /auth/reset-password =======================================================
   fastify.post("/reset-password", async (request, reply) => {
     const parsed = z.object({
       token: z.string().min(1, "Token is required"),

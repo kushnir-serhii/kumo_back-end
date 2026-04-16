@@ -23,6 +23,8 @@ export interface UserResponse {
   notification: boolean;
   analyticsConsent: boolean;
   createdAt: string;
+  chatMessagesUsedToday: number;
+  chatMessageLimit: number;
 }
 
 export interface AuthResponse {

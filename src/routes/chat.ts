@@ -44,14 +44,21 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
     // Enforce per-subscription message limit before SSE headers are written
     const user = await fastify.prisma.user.findUnique({
       where: { id: userId },
-      select: { subscription: true, chatMessageCount: true },
+      select: { subscription: true, chatMessageCount: true, chatMessageCountDate: true },
     });
 
-    if (user?.subscription === 'free' && user.chatMessageCount >= env.FREE_CHAT_MESSAGE_LIMIT) {
+    // Compute effective daily count (reset if it's a new day)
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const countDate = user?.chatMessageCountDate ? new Date(user.chatMessageCountDate) : null;
+    countDate?.setUTCHours(0, 0, 0, 0);
+    const isNewDay = !countDate || countDate.getTime() < today.getTime();
+    const effectiveCount = isNewDay ? 0 : (user?.chatMessageCount ?? 0);
+
+    if (user?.subscription === 'free' && effectiveCount >= env.FREE_CHAT_MESSAGE_LIMIT) {
       return httpError('Chat message limit reached for free plan', 403);
     }
 
-    console.log("Parsed chat stream data:", messages);
     validateMessageTokens(messages);
 
     // Set SSE headers
@@ -81,14 +88,17 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
           `data: ${JSON.stringify({ type: 'token', content: token })}\n\n`
         );
       }
-// console.log("TRY_CATCH>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-      // Increment message count for free users and notify if limit just reached
+      // Increment daily message count for free users
       if (user?.subscription === 'free') {
-        const newCount = user.chatMessageCount + 1;
+        const newCount = effectiveCount + 1;
         await fastify.prisma.user.update({
           where: { id: userId },
-          data: { chatMessageCount: { increment: 1 } },
+          data: {
+            chatMessageCount: newCount,
+            ...(isNewDay ? { chatMessageCountDate: new Date() } : {}),
+          },
         });
+        reply.raw.write(`data: ${JSON.stringify({ type: 'messages_info', used: newCount, limit: env.FREE_CHAT_MESSAGE_LIMIT })}\n\n`);
         if (newCount >= env.FREE_CHAT_MESSAGE_LIMIT) {
           reply.raw.write(`data: ${JSON.stringify({ type: 'limit_reached' })}\n\n`);
         }
