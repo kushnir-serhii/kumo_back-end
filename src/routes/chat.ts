@@ -82,19 +82,23 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
         );
       }
 // console.log("TRY_CATCH>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+      // Increment message count for free users and notify if limit just reached
+      if (user?.subscription === 'free') {
+        const newCount = user.chatMessageCount + 1;
+        await fastify.prisma.user.update({
+          where: { id: userId },
+          data: { chatMessageCount: { increment: 1 } },
+        });
+        if (newCount >= env.FREE_CHAT_MESSAGE_LIMIT) {
+          reply.raw.write(`data: ${JSON.stringify({ type: 'limit_reached' })}\n\n`);
+        }
+      }
+
       // Send done event
       reply.raw.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
 
       // Send end signal
       reply.raw.write('data: [DONE]\n\n');
-
-      // Increment message count for free users
-      if (user?.subscription === 'free') {
-        await fastify.prisma.user.update({
-          where: { id: userId },
-          data: { chatMessageCount: { increment: 1 } },
-        });
-      }
     } catch (error) {
       console.error('Stream error:', error);
       reply.raw.write(
