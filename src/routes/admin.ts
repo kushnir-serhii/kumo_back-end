@@ -50,7 +50,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
       httpError(parsed.error.errors[0].message, 400);
     }
 
-    const user = await fastify.prisma.user.findUnique({ where: { id } });
+    const user = await fastify.prisma.user.findUnique({ where: { id }, select: { id: true } });
     if (!user) httpError('User not found', 404);
 
     const updated = await fastify.prisma.user.update({
@@ -80,7 +80,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     const { title, body, userId } = parsed.data;
 
     if (userId) {
-      const user = await fastify.prisma.user.findUnique({ where: { id: userId } });
+      const user = await fastify.prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
       if (!user) httpError('User not found', 404);
       await notifyUser(fastify.prisma, userId, title, body);
     } else {

@@ -175,6 +175,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
 
     const user = await fastify.prisma.user.findUnique({
       where: { id: userId },
+      select: { id: true },
     });
 
     if (!user) {
@@ -210,6 +211,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
     // Get current user
     const user = await fastify.prisma.user.findUnique({
       where: { id: userId },
+      select: { id: true, password: true },
     });
 
     if (!user) {
@@ -225,6 +227,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
     // Check if new email is already taken
     const existingUser = await fastify.prisma.user.findUnique({
       where: { email: newEmail },
+      select: { id: true },
     });
 
     if (existingUser && existingUser.id !== userId) {
@@ -264,6 +267,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
     // Get current user
     const user = await fastify.prisma.user.findUnique({
       where: { id: userId },
+      select: { id: true, password: true },
     });
 
     if (!user) {
@@ -312,6 +316,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
     // Verify user owns this email
     const user = await fastify.prisma.user.findUnique({
       where: { id: userId },
+      select: { id: true, email: true, emailConfirmed: true },
     });
 
     if (!user || user.email !== email) {

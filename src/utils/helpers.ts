@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { User, WeeklyStreak } from '@prisma/client';
 import { UserResponse, ROLES } from '../types';
+import { env } from '../config/env';
 
 export function formatUserResponse(
   user: User,
@@ -24,7 +25,18 @@ export function formatUserResponse(
     notification: user.notification,
     analyticsConsent: user.analyticsConsent,
     createdAt: user.createdAt.toISOString(),
+    chatMessagesUsedToday: computeMessagesUsedToday(user),
+    chatMessageLimit: env.FREE_CHAT_MESSAGE_LIMIT,
   };
+}
+
+function computeMessagesUsedToday(user: User): number {
+  if (!user.chatMessageCountDate) return 0;
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const countDate = new Date(user.chatMessageCountDate);
+  countDate.setUTCHours(0, 0, 0, 0);
+  return countDate.getTime() === today.getTime() ? user.chatMessageCount : 0;
 }
 
 export function generateVerificationToken(): string {

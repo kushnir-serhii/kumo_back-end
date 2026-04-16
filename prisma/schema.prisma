@@ -36,13 +36,13 @@ model User {
   nextPaymentDate DateTime?
   trialEndsDate   DateTime?
   productId       String?
-  purchaseToken   String?
   role            Role      @default(user)
   notification      Boolean   @default(false)
   analyticsConsent  Boolean   @default(false)
   pushToken         String?
-  chatMessageCount  Int       @default(0)
-  createdAt         DateTime  @default(now())
+  chatMessageCount     Int       @default(0)
+  chatMessageCountDate DateTime?
+  createdAt            DateTime  @default(now())
 
   weeklyStreaks        WeeklyStreak[]
   verificationTokens  VerificationToken[]
