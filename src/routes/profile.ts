@@ -345,7 +345,15 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     // Send verification email
-    await sendVerificationEmail(email, token);
+    try {
+      await sendVerificationEmail(email, token);
+    } catch (err) {
+      fastify.log.error({ err }, 'Failed to send verification email');
+      return reply.status(503).send({
+        success: false,
+        message: "We couldn't send the email right now. Please try again.",
+      });
+    }
 
     return reply.send({
       success: true,

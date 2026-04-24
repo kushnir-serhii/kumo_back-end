@@ -1,23 +1,21 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { env } from '../config/env';
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: env.SMTP_USER,
-    pass: env.SMTP_PASS,
-  },
-});
+const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
-const from = `"Calmisu" <${env.SMTP_USER}>`;
+const FROM = 'Calmisu <noreply@calmisu.com>';
 
 export async function sendVerificationEmail(
   email: string,
   token: string
 ): Promise<void> {
+  if (!resend) {
+    console.log('[Resend] No API key — skipping sendVerificationEmail');
+    return;
+  }
   const verificationUrl = `${env.API_URL}/verify-email?token=${token}`;
-  const info = await transporter.sendMail({
-    from,
+  const { data, error } = await resend.emails.send({
+    from: FROM,
     to: email,
     subject: 'Verify your Calmisu email',
     html: `
@@ -28,16 +26,21 @@ export async function sendVerificationEmail(
       <p>If you didn't create an account with Calmisu, you can safely ignore this email.</p>
     `,
   });
-  console.log('[Nodemailer] sendVerificationEmail sent, messageId:', info.messageId);
+  if (error) throw new Error(`Resend error: ${error.message}`);
+  console.log('[Resend] sendVerificationEmail sent, id:', data?.id);
 }
 
 export async function sendPasswordResetEmail(
   email: string,
   token: string
 ): Promise<void> {
+  if (!resend) {
+    console.log('[Resend] No API key — skipping sendPasswordResetEmail');
+    return;
+  }
   const resetUrl = `${env.API_URL}/auth/password-reset-redirect?token=${token}`;
-  await transporter.sendMail({
-    from,
+  const { data, error } = await resend.emails.send({
+    from: FROM,
     to: email,
     subject: 'Reset your Calmisu password',
     html: `
@@ -48,4 +51,5 @@ export async function sendPasswordResetEmail(
       <p>If you didn't request a password reset, you can safely ignore this email.</p>
     `,
   });
+  if (error) throw new Error(`Resend error: ${error.message}`);
 }

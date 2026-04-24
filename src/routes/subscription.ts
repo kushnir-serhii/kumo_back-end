@@ -9,7 +9,7 @@ const RC_API_BASE = "https://api.revenuecat.com/v1";
 interface RcSubscriberResponse {
   subscriber: {
     entitlements: {
-      pro?: {
+      'Calmisu Pro'?: {
         expires_date: string | null;
         product_identifier: string;
       };
@@ -28,7 +28,8 @@ interface RcWebhookBody {
 
 async function getRevenueCatSubscriber(
   userId: string,
-  apiKey: string
+  apiKey: string,
+  isSandbox: boolean
 ): Promise<RcSubscriberResponse> {
   const response = await fetch(
     `${RC_API_BASE}/subscribers/${encodeURIComponent(userId)}`,
@@ -36,6 +37,7 @@ async function getRevenueCatSubscriber(
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
+        ...(isSandbox && { "X-Is-Sandbox": "true" }),
       },
     }
   );
@@ -62,9 +64,10 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
 
       const rcData = await getRevenueCatSubscriber(
         userId,
-        env.REVENUECAT_SECRET_API_KEY!
+        env.REVENUECAT_SECRET_API_KEY!,
+        env.REVENUECAT_SANDBOX
       );
-      const entitlement = rcData.subscriber.entitlements.pro;
+      const entitlement = rcData.subscriber.entitlements['Calmisu Pro'];
       const isActive =
         entitlement != null &&
         (entitlement.expires_date === null ||
@@ -114,9 +117,10 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
 
       const rcData = await getRevenueCatSubscriber(
         userId,
-        env.REVENUECAT_SECRET_API_KEY!
+        env.REVENUECAT_SECRET_API_KEY!,
+        env.REVENUECAT_SANDBOX
       );
-      const entitlement = rcData.subscriber.entitlements.pro;
+      const entitlement = rcData.subscriber.entitlements['Calmisu Pro'];
       const isActive =
         entitlement != null &&
         (entitlement.expires_date === null ||

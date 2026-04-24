@@ -638,6 +638,20 @@ Response: { success: boolean, message?: string }
 - `GOOGLE_SHEETS_CLIENT_EMAIL`
 - `GOOGLE_SHEETS_SPREADSHEET_ID`
 
+### App Version
+
+#### `GET /version`
+
+```
+Response: { minVersion: string, latestVersion: string, storeUrls: { android: string, ios: string } }
+```
+
+- No authentication required
+- `minVersion` — app versions below this show a critical update popup on every launch
+- `latestVersion` — app versions below this (but ≥ minVersion) show a soft update popup once per 24h
+- `storeUrls` — deep links to Google Play and App Store
+- Values are **hardcoded constants** in `src/routes/version.ts` — update them when releasing a new build
+
 ### Health Check
 
 #### `GET /health`

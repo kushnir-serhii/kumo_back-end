@@ -14,16 +14,12 @@ const envSchema = z.object({
   JWT_SECRET: z.string(),
   JWT_EXPIRES_IN: z.string().default('7d'),
   OPENAI_API_KEY: isProd ? z.string() : optional,
-  AWS_ACCESS_KEY_ID: optional,
-  AWS_SECRET_ACCESS_KEY: optional,
-  AWS_REGION: z.string().default('us-east-1'),
-  AWS_S3_BUCKET: optional,
   API_URL: isProd ? z.string() : z.string().default('http://localhost:3001'),
-  SMTP_USER: isProd ? z.string() : optional,
-  SMTP_PASS: isProd ? z.string() : optional,
+  RESEND_API_KEY: isProd ? z.string() : optional,
   // RevenueCat (subscription management)
   REVENUECAT_SECRET_API_KEY: isProd ? z.string() : optional,
   REVENUECAT_WEBHOOK_SECRET: isProd ? z.string() : optional,
+  REVENUECAT_SANDBOX: z.string().transform((v) => v === 'true').default('false'),
   // Expo Push Notifications (optional — increases delivery reliability)
   EXPO_ACCESS_TOKEN: optional,
   GOOGLE_SHEETS_PRIVATE_KEY: isProd ? z.string() : optional,
@@ -34,6 +30,9 @@ const envSchema = z.object({
   GOOGLE_ANDROID_CLIENT_ID: optional,
   GOOGLE_IOS_CLIENT_ID: optional,
   FREE_CHAT_MESSAGE_LIMIT: z.string().transform(Number).default('10'),
+  APP_MIN_VERSION: z.string().default('1.0.0'),
+  APP_LATEST_VERSION: z.string().default('1.0.0'),
+  APP_STORE_URL_ANDROID: z.string().default('market://details?id=com.calmisu.app'),
   PORT: z.string().transform(Number).default('3001'),
   NODE_ENV: z.enum(['development', 'production']).default('development'),
 });
