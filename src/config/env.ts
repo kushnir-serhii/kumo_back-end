@@ -15,8 +15,7 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('7d'),
   OPENAI_API_KEY: isProd ? z.string() : optional,
   API_URL: isProd ? z.string() : z.string().default('http://localhost:3001'),
-  SMTP_USER: isProd ? z.string() : optional,
-  SMTP_PASS: isProd ? z.string() : optional,
+  RESEND_API_KEY: isProd ? z.string() : optional,
   // RevenueCat (subscription management)
   REVENUECAT_SECRET_API_KEY: isProd ? z.string() : optional,
   REVENUECAT_WEBHOOK_SECRET: isProd ? z.string() : optional,
