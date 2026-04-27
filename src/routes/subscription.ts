@@ -12,6 +12,7 @@ interface RcSubscriberResponse {
       'Calmisu Pro'?: {
         expires_date: string | null;
         product_identifier: string;
+        period_type?: 'trial' | 'intro' | 'normal';
       };
     };
   };
@@ -83,6 +84,26 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
           success: false,
           message: "No active subscription found",
           user: formatUserResponse(user!, user!.weeklyStreaks),
+        });
+      }
+
+      if (entitlement.period_type === 'trial') {
+        const trialEndsDate = entitlement.expires_date
+          ? new Date(entitlement.expires_date)
+          : null;
+        const user = await fastify.prisma.user.update({
+          where: { id: userId },
+          data: {
+            subscription: Subscription.free_trial,
+            trialEndsDate,
+            productId: entitlement.product_identifier,
+          },
+          include: { weeklyStreaks: { orderBy: { date: "desc" }, take: 7 } },
+        });
+        return reply.send({
+          success: true,
+          message: "Free trial activated",
+          user: formatUserResponse(user, user.weeklyStreaks),
         });
       }
 
@@ -197,14 +218,16 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
           });
           break;
         }
-        case "EXPIRATION":
-        case "BILLING_ISSUE": {
+        case "EXPIRATION": {
           await fastify.prisma.user.update({
             where: { id: user.id },
             data: { subscription: "cancelled", nextPaymentDate: null },
           });
           break;
         }
+        case "BILLING_ISSUE":
+          // Grace period started — retain Pro access until EXPIRATION fires
+          break;
         case "TRIAL_STARTED": {
           const trialEndsDate = expiration_at_ms
             ? new Date(expiration_at_ms)
@@ -228,12 +251,22 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         case "TRIAL_CANCELLED": {
           await fastify.prisma.user.update({
             where: { id: user.id },
-            data: { subscription: "cancelled", trialEndsDate: null, nextPaymentDate: null },
+            data: { subscription: Subscription.free, trialEndsDate: null, nextPaymentDate: null },
+          });
+          break;
+        }
+        case "UNCANCELLATION": {
+          const nextPaymentDate = expiration_at_ms ? new Date(expiration_at_ms) : undefined;
+          await fastify.prisma.user.update({
+            where: { id: user.id },
+            data: {
+              subscription: "pro",
+              ...(nextPaymentDate !== undefined && { nextPaymentDate }),
+            },
           });
           break;
         }
         case "CANCELLATION":
-        case "UNCANCELLATION":
           // No immediate change — access continues until nextPaymentDate
           break;
         default:
