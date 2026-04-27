@@ -96,7 +96,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
     ) {
       user = await fastify.prisma.user.update({
         where: { id: userId },
-        data: { subscription: "cancelled", trialEndsDate: null },
+        data: { subscription: Subscription.free, trialEndsDate: null },
         include: { weeklyStreaks: { orderBy: { date: "desc" }, take: 7 } },
       });
     }
